@@ -62,18 +62,20 @@ def main(video_path, yolo_model_path, deep_sort_config_path):
                     class_ids.append(cls_id)
 
         # 调用DeepSORT进行追踪
-        outputs = deepsort.update(torch.tensor(bbox_xywh), torch.tensor(confidences), frame)
+        print(torch.tensor(bbox_xywh).shape)
+        if torch.tensor(bbox_xywh).shape[0] > 0:
+            outputs = deepsort.update(torch.tensor(bbox_xywh), torch.tensor(confidences), frame)
 
-        # 显示追踪结果
-        for value in outputs:
-            x1, y1, x2, y2, track_id = value
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, str(track_id), (x1, y1 - 10), 0, 0.75, (0, 255, 0), 2)
+            # 显示追踪结果
+            for value in outputs:
+                x1, y1, x2, y2, track_id = value
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, str(track_id), (x1, y1 - 10), 0, 0.75, (0, 255, 0), 2)
         # Write the frame with the tracking information
         out_video.write(frame)
-        # cv2.imshow('Tracker', frame)
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
+        cv2.imshow('Tracker', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     cap.release()
     out_video.release()  # Make sure to release the video writer
@@ -81,7 +83,7 @@ def main(video_path, yolo_model_path, deep_sort_config_path):
 
 
 if __name__ == "__main__":
-    video_path = "/mnt/d/Files/coursework/670/project/dataset/Top-View Vehicle Detection Image/sample_video.mp4"
+    video_path = "/mnt/d/Files/coursework/670/project/dataset/Harpy Data Vehicle/DJI_0406_full.mp4"
     yolo_model_path = ""
     deep_sort_config_path = "deep_sort.yaml"
     main(video_path, yolo_model_path, deep_sort_config_path)
