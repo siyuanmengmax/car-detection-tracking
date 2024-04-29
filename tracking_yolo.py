@@ -81,7 +81,7 @@ def main(video_path, yolo_model_path, deep_sort_config_path):
 
 
 if __name__ == "__main__":
-    video_path = "/mnt/d/Files/coursework/670/project/dataset/Top-View Vehicle Detection Image/sample_video.mp4"
+    video_path = "/Users/rcfadmin/project/traffic-project/dataset/Top-View Vehicle Detection Image/sample_video.mp4"
     yolo_model_path = ""
     deep_sort_config_path = "deep_sort.yaml"
     main(video_path, yolo_model_path, deep_sort_config_path)
