@@ -46,7 +46,7 @@ def main(video_path, yolo_model_path):
             for box in boxes:
                 x1, y1, x2, y2, conf, cls_id = box  # Extract coordinates, confidence, and class ID
                 cls_id = int(cls_id)  # Convert class ID to integer
-                if cls_id in [2, 7]:  # Filter class 2/7
+                if cls_id in [2,5, 7]:  # Filter class 2/7
                     bbox = (int(x1), int(y1), int(x2), int(y2))
                     cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
                     cv2.putText(frame, str(cls_id), (bbox[0], bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 255, 0), 2)

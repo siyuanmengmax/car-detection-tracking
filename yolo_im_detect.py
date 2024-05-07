@@ -43,7 +43,7 @@ def main(input_path, model_path):
                 for box in boxes:
                     x1, y1, x2, y2, conf, cls_id = box.tolist()  # Extract coordinates, confidence, and class ID
                     cls_id = int(cls_id)  # Convert class ID to integer
-                    if cls_id in [2, 7]:  # Filter class 2/7
+                    if cls_id in [2,5, 7]:  # Filter class 2/7
                         bbox = (int(x1), int(y1), int(x2), int(y2))
                         class_name="vehicle"
                         files_to_csv.append([os.path.basename(file),class_name,bbox[0],bbox[1],bbox[2],bbox[3],conf])
@@ -59,6 +59,6 @@ def main(input_path, model_path):
     # cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    input_path = "/Users/rcfadmin/project/traffic-project/detr_master/dataset/coco/val2017"
+    input_path = "/Users/rcfadmin/project/traffic-project/try"
     yolo_model_path = "yolov8m.pt"
     main(input_path, yolo_model_path)
