@@ -5,7 +5,7 @@ from deep_sort_pytorch.deep_sort import DeepSort
 import pandas as pd
 import numpy as np
 
-
+test = False
 
 def track_objects(deep_sort_config_path):
     cfg = get_config()
@@ -21,42 +21,92 @@ def track_objects(deep_sort_config_path):
         nn_budget=cfg.DEEPSORT.NN_BUDGET,
         use_cuda=True
     )
-    vidPath = 'Harpy Data Vehicle/DJI_0406_full.MP4'
-    video = cv2.VideoCapture(vidPath)
-    filePath = 'Harpy Data Vehicle/DJI_0406_tracks.csv'
+    #full dataset
+    #vidPath = 'Harpy Data Vehicle/DJI_0406_full.MP4'
+    #filePath = 'Harpy Data Vehicle/DJI_0406_tracks.csv'
+    
+    #cut dataset
+    vidPath = 'Harpy Data Vehicle/DJI_0406_cut.MP4'
+    filePath = 'Harpy Data Vehicle/DJI_0406_cut_tracks.csv'
+    
     data = pd.read_csv(filePath, delimiter=',')
-    #print(data)
+    datasetName = 'harpy'
+    datasetType = 'full'
+
+    video = cv2.VideoCapture(vidPath)
+    # Get video properties for the output video
+    #width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH)/4)
+    #height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT)/4)
+    width = 1280
+    height = 720
+    
+    fps = video.get(cv2.CAP_PROP_FPS)
+
+    codec = cv2.VideoWriter_fourcc(*'mp4v')  # Use 'mp4v' for MP4 format
     bboxes = data.loc[:, ['frame','bboxX','bboxY','Width','Height']]
     columns_headers = ['x1', 'y1', 'x2', 'y2', 'id', 'frame']
 
-    #print(bboxes)
     confidences = torch.ones(bboxes.shape[0])
-    #frames = data.loc[:, ['frame']].to_numpy()
-   
     tracking_info = []
-    #f = open("harpy_deepsort.csv", "w")
-    #outputs = ['x1', 'y1', 'x2', 'y2', 'id', 'frame']
+    # Initialize video writer
+    out_video = cv2.VideoWriter(f'deepsort_{datasetName}{datasetType}_output_videoTest.mp4', codec, fps, (width, height))
     while video.isOpened():
         ret, frame = video.read()
-        current_frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES)) -1
-        if not ret:
+        frame = cv2.resize(frame, (width,height))
+        current_frame_number = int(video.get(cv2.CAP_PROP_POS_FRAMES)) #-1
+        if not ret or current_frame_number>100:
             break  
-        #print(current_frame_number)
-        boxes = bboxes.loc[bboxes['frame']==current_frame_number].values
-        if boxes[:,1:].shape[0] > 0:
-            outputs = deepsort.update(torch.tensor(boxes[:,1:]), confidences[0:len(boxes)], frame)
-            for value in outputs:
-                single_box = np.append(value.astype(int),current_frame_number)
-                tracking_info.append(single_box)
 
-    #np.savetxt("harpy_deepsort_cut.csv", columns_headers, delimiter=",")
-    df = pd.DataFrame(tracking_info)
-    #print(df)
-    #print(tracking_info)
-    df.to_csv("harpy_deepsort_full.csv", sep=',', header=columns_headers, index=False)
-    #np.savetxt("harpy_deepsort_cut.csv", tracking_info, delimiter=",")
+        boxes = bboxes.loc[bboxes['frame']==current_frame_number].values
+        #print(boxes)
+        if boxes[:,1:].shape[0] > 0:
+            if test:
+                for b in range(0, len(boxes)):
+                    #print(boxes[b,1:])
+                    bounding_Box = boxes[b,1:]
+                    
+                    x1 = int((2*bounding_Box[0]-bounding_Box[2])/2)#+300
+                    x2 = int((2*bounding_Box[0]+bounding_Box[2])/2)#+300
+                    y1 = int((2*bounding_Box[1]-bounding_Box[3])/2)#+75
+                    y2 = int((2*bounding_Box[1]+bounding_Box[3])/2)#+75
+                    #print(f"({x1}, {y1}) ({x2},{y2})")
+                    if bounding_Box[0] == 630:
+                        print(f"({x1}, {y1}) ({x2},{y2})")
+                        print(f"frame: {current_frame_number}")
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, "1", (x1, y1 - 10), 0, 0.75, (0, 255, 0), 2)
+
+            else:
+                input_boxes = boxes[:,1:]
+                input_conf = confidences[0:len(boxes)]
+                outputs = deepsort.update(torch.tensor(input_boxes), input_conf, frame)
+                #print("slice of box")
+                #print(input_boxes)
+                #print("output")
+                #print(outputs)
+                for value in outputs:
+                    #write to video
+                    #center, w, h
+                    #x1*currentimgW/originalW
+                    x1, y1, x2, y2, track_id = value
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(frame, str(track_id), (x1, y1 - 10), 0, 0.75, (0, 255, 0), 2)
+                    #format and store output data
+                    single_box = np.append(value.astype(int),current_frame_number)
+                    tracking_info.append(single_box)
+        # Write the frame with the tracking information
+        out_video.write(frame)
+        cv2.imshow('Tracker', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    #save output to a csv
+    #df = pd.DataFrame(tracking_info)
+    #df.to_csv(f"deepsort_{datasetName}{datasetType}_outputTest.csv", sep=',', header=columns_headers, index=False)
+  
 
     video.release()
+    out_video.release() 
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
