@@ -24,7 +24,7 @@ def calculate_iou(box1, box2):
     union_area = box1_area + box2_area - inter_area
     return inter_area / union_area if union_area != 0 else 0
 
-def evaluate_at_thresholds(predictions, ground_truths, thresholds):
+def main(predictions, ground_truths, thresholds):
     precision_data = []
     recall_data = []
     f1_scores = []
@@ -34,17 +34,37 @@ def evaluate_at_thresholds(predictions, ground_truths, thresholds):
         for img_id in predictions:
             pred_boxes = predictions[img_id]
             true_boxes = ground_truths.get(img_id, [])
-            correct_predictions = 0
+            # correct_predictions = 0
+            correct_predictions = set()
             for pred_box in pred_boxes:
-                best_iou = max(calculate_iou(pred_box, true_box) for true_box in true_boxes) if true_boxes else 0
-                if best_iou >= iou_threshold:
+                best_iou = -1
+                best_true_box_index = -1
+                # best_iou = max(calculate_iou(pred_box, true_box) for true_box in true_boxes) if true_boxes else 0
+                for i, true_box in enumerate(true_boxes):
+                    iou = calculate_iou(pred_box, true_box)
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_true_box_index = i
+                # if best_iou >= iou_threshold:
+                #     precision_list.append(1)
+                #     correct_predictions += 1
+                # else:
+                #     precision_list.append(0)
+                if best_iou >= iou_threshold and best_true_box_index not in correct_predictions:
+                    correct_predictions.add(best_true_box_index)
                     precision_list.append(1)
-                    correct_predictions += 1
                 else:
                     precision_list.append(0)
+                # Ensure no division by zero
             if len(true_boxes) > 0:
-                recall = correct_predictions / len(true_boxes)
-                recall_list.append(recall)
+                recall = len(correct_predictions) / len(true_boxes)
+            else:
+                recall = 0
+            recall_list.append(recall)
+            # if len(true_boxes) > 0:
+            #     recall = correct_predictions / len(true_boxes)
+            #     recall_list.append(recall)
+
         precision = np.mean(precision_list) if precision_list else 0
         recall = np.mean(recall_list) if recall_list else 0
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
@@ -53,7 +73,7 @@ def evaluate_at_thresholds(predictions, ground_truths, thresholds):
         f1_scores.append(f1_score)
     return precision_data, recall_data, f1_scores
 
-def plot_precision_recall_curve(precision_data, recall_data, thresholds):
+def plot_precision_recall_curve(precision_data, recall_data):
     plt.figure(figsize=(8, 6))
     plt.plot(recall_data, precision_data, marker='o')
     plt.title('Precision-Recall Curve')
@@ -64,11 +84,12 @@ def plot_precision_recall_curve(precision_data, recall_data, thresholds):
 
 if __name__ == '__main__':
     thresholds = np.arange(0.5, 1.0, 0.05)
-    predictions = load_csv('output/detection_detr_image/results.csv')
-    ground_truths = load_csv('dataset/Car Tracking & Object Detection/annotations.csv')
-    precision_data, recall_data, f1_scores = evaluate_at_thresholds(predictions, ground_truths, thresholds)
+    predictions = load_csv('output/detection_detr_video_50_full_e300/results.csv')
+    ground_truths = load_csv('dataset/Harpy Data Vehicle/annotations.csv')
+    # ground_truths = load_csv('dataset/Car Tracking & Object Detection/annotations.csv')
+    precision_data, recall_data, f1_scores = main(predictions, ground_truths, thresholds)
     print(f'mAP50: {precision_data[0]}, mAR50: {recall_data[0]}')
     print(f"mAP50-95: {np.mean(precision_data)}, mAR@50-95: {np.mean(recall_data)}")
     print(f"F1 Scores50：{f1_scores[0]}")
     print(f"F1 Scores50-95：{np.mean(f1_scores)}")
-    plot_precision_recall_curve(precision_data, recall_data, thresholds)
+    plot_precision_recall_curve(precision_data, recall_data)
